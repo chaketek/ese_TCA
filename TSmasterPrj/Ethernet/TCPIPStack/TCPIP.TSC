@@ -1,1 +1,4 @@
-﻿
+﻿[TCPIP]
+ChnCount=0
+vMaintainEthConfigurationCreateDynamically=0
+vSocketStackIndex=0
