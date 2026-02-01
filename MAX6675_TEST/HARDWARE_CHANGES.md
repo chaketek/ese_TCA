@@ -1,7 +1,11 @@
-# MAX6675 2ch + SparkFun CAN-Bus Shield ハードウェア変更概要
+# Haltech TCA2 エミュレータ (MAX6675 2ch + SparkFun CAN-Bus Shield)
 
 ## 概要
-2つのMAX6675温度センサーをSparkFun CAN-Bus Shieldと併用するにあたり、ピン干渉を回避するための配線変更が必要です。
+Haltech TCA2 (熱電対温度計測コントローラ) のエミュレータです。
+2つのMAX6675温度センサーをSparkFun CAN-Bus Shieldと併用し、Haltech ECU互換のCANフォーマットで温度データを送信します。
+
+### 参考リポジトリ
+- Haltech Wideband Emulator: https://github.com/blacksheepinc/Haltech-wideband-emulator
 
 ---
 
@@ -94,39 +98,71 @@ SparkFun CAN-Bus Shieldを使用するには、以下のライブラリが必要
 
 ---
 
-## CAN通信仕様
+## CAN通信仕様 (Haltech TCA2互換)
 
 | 項目 | 値 |
 |------|-----|
-| CAN速度 | 500kbps |
-| 温度データのCAN ID | 0x100 |
-| データ長 | 4バイト |
-| 送信周期 | 100ms |
+| CAN速度 | 1Mbps |
+| CAN ID | 0x716 (TCA2) |
+| データ長 | 8バイト |
+| 送信周期 | 50ms (20Hz) |
+| チャンネル数 | 4 (TC1-TC4) |
 
-### データフォーマット (Little Endian)
-| バイト | 内容 |
-|--------|------|
-| data[0] | Temperature_CH1 Low byte |
-| data[1] | Temperature_CH1 High byte |
-| data[2] | Temperature_CH2 Low byte |
-| data[3] | Temperature_CH2 High byte |
+### データフォーマット (Big Endian / MS First)
+各チャンネルは16ビットで構成され、上位4ビットがダイアグ、下位12ビットが温度データです。
 
-※温度値は100倍した整数値 (例: 25.50°C → 2550)
-※エラー時は 0x7FFF を送信
+| バイト | ビット | 内容 |
+|--------|--------|------|
+| data[0] | 7-4 | TC1 Diagnostic (4bit) |
+| data[0] | 3-0 | TC1 Temperature 上位4bit |
+| data[1] | 7-0 | TC1 Temperature 下位8bit |
+| data[2] | 7-4 | TC2 Diagnostic (4bit) |
+| data[2] | 3-0 | TC2 Temperature 上位4bit |
+| data[3] | 7-0 | TC2 Temperature 下位8bit |
+| data[4] | 7-4 | TC3 Diagnostic (4bit) |
+| data[4] | 3-0 | TC3 Temperature 上位4bit |
+| data[5] | 7-0 | TC3 Temperature 下位8bit |
+| data[6] | 7-4 | TC4 Diagnostic (4bit) |
+| data[6] | 3-0 | TC4 Temperature 上位4bit |
+| data[7] | 7-0 | TC4 Temperature 下位8bit |
+
+### 温度変換式
+```
+温度[°C] = raw × 2381 / 5850 - 250
+逆変換:  raw = (温度[°C] + 250) × 5850 / 2381
+```
+
+| パラメータ | 値 |
+|------------|-----|
+| Multiplier | 2381 |
+| Divider | 5850 |
+| Offset | -250 |
+| 有効範囲 | -250°C ～ +1417°C |
+
+### 診断コード (Diagnostic Codes) - 4ビット
+| 値 | 状態 |
+|----|------|
+| 0 | Normal operation (正常) |
+| 1 | Sensor Short Circuit (短絡) |
+| 2 | Sensor Open Circuit (オープン) |
+| 3 | Under Range (下限エラー) |
+| 4 | Over Range (上限エラー) |
 
 ### 受信側でのデコード例
 ```cpp
-// CH1
-int16_t temp1Int = data[0] | (data[1] << 8);
-float temperature_ch1 = temp1Int / 100.0;
+// TC1 (Big Endian, MS First)
+uint8_t diag1 = (data[0] >> 4) & 0x0F;
+uint16_t raw1 = ((data[0] & 0x0F) << 8) | data[1];
+float temperature_ch1 = raw1 * 2381.0 / 5850.0 - 250.0;
 
-// CH2
-int16_t temp2Int = data[2] | (data[3] << 8);
-float temperature_ch2 = temp2Int / 100.0;
+// TC2
+uint8_t diag2 = (data[2] >> 4) & 0x0F;
+uint16_t raw2 = ((data[2] & 0x0F) << 8) | data[3];
+float temperature_ch2 = raw2 * 2381.0 / 5850.0 - 250.0;
 
-// エラーチェック
-if (temp1Int == 0x7FFF) {
-  // CH1 エラー（熱電対オープン）
+// 診断コードチェック
+if (diag1 == 2) {
+  // CH1 センサーオープン
 }
 ```
 
@@ -138,3 +174,4 @@ if (temp1Int == 0x7FFF) {
 |------|------|
 | 2026/01/31 | 初版作成 - CAN-Bus Shield対応のためピン変更 |
 | 2026/02/01 | CH2追加 - D4ピンを使用した2ch対応 |
+| 2026/02/01 | Haltech TCA2エミュレータ対応 - CAN ID 0x716, 1Mbps, Big Endian形式 |

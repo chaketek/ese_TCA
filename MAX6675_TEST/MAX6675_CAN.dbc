@@ -26,26 +26,43 @@ NS_ :
 	BA_SGTYPE_REL_
 	SG_MUL_VAL_
 
-BS_:
+BS_: 1000000
 
-BU_: MAX6675_Node
+BU_: Haltech_TCA2_Emulator
 
-BO_ 256 Temperature_Data: 4 MAX6675_Node
- SG_ Temperature_CH1 : 0|16@1+ (0.01,0) [-327.68|327.67] "degC" Vector__XXX
- SG_ Temperature_CH2 : 16|16@1+ (0.01,0) [-327.68|327.67] "degC" Vector__XXX
+BO_ 1814 TCA2_Temperature_Data: 8 Haltech_TCA2_Emulator
+ SG_ CAN_TC1_Diag : 0|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC1 : 4|12@0+ (0.4071,0) [-250.0|1417.0] "degC" Vector__XXX
+ SG_ CAN_TC2_Diag : 16|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC2 : 20|12@0+ (0.4071,0) [-250.0|1417.0] "degC" Vector__XXX
+ SG_ CAN_TC3_Diag : 32|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC3 : 36|12@0+ (0.4071,0) [-250.0|1417.0] "degC" Vector__XXX
+ SG_ CAN_TC4_Diag : 48|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC4 : 52|12@0+ (0.4071,0) [-250.0|1417.0] "degC" Vector__XXX
 
-CM_ BU_ MAX6675_Node "MAX6675 Thermocouple Temperature Sensor Node (2ch)";
-CM_ BO_ 256 "Temperature measurement data from 2x MAX6675 K-type thermocouple sensors";
-CM_ SG_ 256 Temperature_CH1 "Temperature CH1 measured by MAX6675. Raw value is temperature * 100. Range: 0 to +1024 degC. 0x7FFF = Error";
-CM_ SG_ 256 Temperature_CH2 "Temperature CH2 measured by MAX6675. Raw value is temperature * 100. Range: 0 to +1024 degC. 0x7FFF = Error";
+CM_ BU_ Haltech_TCA2_Emulator "Haltech TCA2 Thermocouple Amplifier Emulator using MAX6675 sensors. Ref: https://github.com/blacksheepinc/Haltech-wideband-emulator";
+CM_ BO_ 1814 "Haltech TCA2 compatible thermocouple temperature data (CAN ID 0x716). 4 channels, each 16-bit: [Diag(4bit)|Temp(12bit)]";
+CM_ SG_ 1814 CAN_TC1_Diag "TC1 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 1814 CAN_TC1 "TC1 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
+CM_ SG_ 1814 CAN_TC2_Diag "TC2 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 1814 CAN_TC2 "TC2 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
+CM_ SG_ 1814 CAN_TC3_Diag "TC3 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 1814 CAN_TC3 "TC3 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
+CM_ SG_ 1814 CAN_TC4_Diag "TC4 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 1814 CAN_TC4 "TC4 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
 
 BA_DEF_ BO_ "GenMsgCycleTime" INT 0 10000;
 BA_DEF_ SG_ "GenSigStartValue" FLOAT 0 0;
+BA_DEF_ BU_ "NodeComment" STRING;
 
 BA_DEF_DEF_ "GenMsgCycleTime" 0;
 BA_DEF_DEF_ "GenSigStartValue" 0;
+BA_DEF_DEF_ "NodeComment" "";
 
-BA_ "GenMsgCycleTime" BO_ 256 100;
+BA_ "GenMsgCycleTime" BO_ 1814 50;
 
-VAL_TABLE_ TemperatureStatus 0 "Valid" 1 "Error_Open" ;
+VAL_ 1814 CAN_TC1_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range";
+VAL_ 1814 CAN_TC2_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range";
+VAL_ 1814 CAN_TC3_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range";
+VAL_ 1814 CAN_TC4_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range";
 

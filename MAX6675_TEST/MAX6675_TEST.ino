@@ -1,8 +1,11 @@
 /*
- * MAX6675 2ch 温度計測 + CAN送信
+ * Haltech TCA2 エミュレータ (MAX6675 2ch 温度計測 + CAN送信)
  * 
  * SparkFun CAN-Bus Shield と組み合わせて使用
- * 2つのMAX6675で計測した温度データをCANメッセージで送信
+ * 2つのMAX6675で計測した温度データをHaltech TCA2互換形式でCAN送信
+ * 
+ * 参考リポジトリ:
+ *   https://github.com/blacksheepinc/Haltech-wideband-emulator
  * 
  * ピン割り当て (CAN-Bus Shieldとの干渉を回避):
  *   MAX6675 CH1 CS : D3
@@ -30,10 +33,17 @@
 // #define SD_CS       9  // SDカードのCS
 
 // ============================================
-// CAN設定
+// CAN設定 (Haltech TCA2 互換)
 // ============================================
-#define CAN_ID_TEMPERATURE  0x100  // 温度データのCAN ID
-#define CAN_SEND_INTERVAL   100    // CAN送信間隔 (ms)
+#define CAN_ID_TCA2         0x716  // Haltech TCA2 CAN ID
+#define CAN_SEND_INTERVAL   50     // CAN送信間隔 (ms) - 20Hz
+
+// 診断コード
+#define DIAG_NORMAL           0    // Normal operation
+#define DIAG_SHORT_CIRCUIT    1    // Sensor Short Circuit
+#define DIAG_OPEN_CIRCUIT     2    // Sensor Open Circuit
+#define DIAG_UNDER_RANGE      3    // Under Range
+#define DIAG_OVER_RANGE       4    // Over Range
 
 // ============================================
 // キャリブレーション設定
@@ -59,9 +69,10 @@ bool canInitialized = false;
 // セットアップ
 // ============================================
 void setup() {
-  Serial.begin(9600);
-  Serial.println(F("MAX6675 2ch + CAN Transmitter"));
-  Serial.println(F("============================="));
+  Serial.begin(115200);  // Haltechエミュレータに合わせて115200bps
+  Serial.println(F("Haltech TCA2 Emulator (MAX6675 2ch)"));
+  Serial.println(F("===================================="));
+  Serial.println(F("Ref: github.com/blacksheepinc/Haltech-wideband-emulator"));
   
   // MAX6675のCSピン初期化 (両チャンネル)
   pinMode(MAX6675_CH1_CS, OUTPUT);
@@ -75,9 +86,9 @@ void setup() {
   // MAX6675の初期化完了を待つ（最大変換時間220ms）
   delay(250);
   
-  // CAN-Bus初期化 (500kbps)
-  Serial.print(F("Initializing CAN-Bus... "));
-  if (Canbus.init(CANSPEED_500)) {
+  // CAN-Bus初期化 (1Mbps - Haltech標準)
+  Serial.print(F("Initializing CAN-Bus (1Mbps)... "));
+  if (Canbus.init(CANSPEED_1000)) {  // 1Mbps
     Serial.println(F("OK"));
     canInitialized = true;
   } else {
@@ -119,7 +130,13 @@ float readTemperature(uint8_t csPin, float offset) {
 }
 
 // ============================================
-// CANメッセージ送信関数 (2ch対応)
+// CANメッセージ送信関数 (Haltech TCA2互換フォーマット)
+// ============================================
+// データフォーマット (各チャンネル16ビット):
+//   ビット0-3:  ダイアグコード (4ビット)
+//   ビット4-15: 温度データ (12ビット)
+// 変換式: 温度[°C] = raw * 2381 / 5850 - 250
+// 逆変換: raw = (温度[°C] + 250) * 5850 / 2381
 // ============================================
 void sendTemperatureCAN(float temp_ch1, float temp_ch2) {
   if (!canInitialized) {
@@ -128,23 +145,62 @@ void sendTemperatureCAN(float temp_ch1, float temp_ch2) {
   
   tCAN message;
   
-  message.id = CAN_ID_TEMPERATURE;  // CAN ID
+  message.id = CAN_ID_TCA2;         // CAN ID: 0x716
   message.header.rtr = 0;           // データフレーム
-  message.header.length = 4;        // データ長: 4バイト (2ch x 2bytes)
+  message.header.length = 8;        // データ長: 8バイト (4チャンネル分)
   
-  // float を バイト配列に変換
-  // 方法: 温度を100倍して整数化 (小数点以下2桁の精度を保持)
-  // Little Endian (Intel形式) で送信 - DBCファイルの定義に合わせる
+  // Haltech TCA2フォーマット:
+  // - Big Endian (MS First)
+  // - 各チャンネル16ビット: [Diag(4bit) | Temp(12bit)]
+  // - 温度変換式: raw = (temp + 250) * 5850 / 2381
   
-  // CH1: data[0-1]
-  int16_t temp1Int = isnan(temp_ch1) ? (int16_t)0x7FFF : (int16_t)(temp_ch1 * 100);
-  message.data[0] = temp1Int & 0xFF;         // CH1 Low byte
-  message.data[1] = (temp1Int >> 8) & 0xFF;  // CH1 High byte
+  // CH1 診断コードと温度raw値を計算
+  uint8_t diag1 = DIAG_NORMAL;
+  uint16_t raw1;
+  if (isnan(temp_ch1)) {
+    raw1 = 0xFFF;  // 12ビット最大値 (エラー)
+    diag1 = DIAG_OPEN_CIRCUIT;
+  } else {
+    // 温度→raw値変換: raw = (temp + 250) * 5850 / 2381
+    float rawFloat = (temp_ch1 + 250.0) * 5850.0 / 2381.0;
+    raw1 = constrain((uint16_t)rawFloat, 0, 0xFFF);  // 12ビットに制限
+  }
   
-  // CH2: data[2-3]
-  int16_t temp2Int = isnan(temp_ch2) ? (int16_t)0x7FFF : (int16_t)(temp_ch2 * 100);
-  message.data[2] = temp2Int & 0xFF;         // CH2 Low byte
-  message.data[3] = (temp2Int >> 8) & 0xFF;  // CH2 High byte
+  // CH2 診断コードと温度raw値を計算
+  uint8_t diag2 = DIAG_NORMAL;
+  uint16_t raw2;
+  if (isnan(temp_ch2)) {
+    raw2 = 0xFFF;  // 12ビット最大値 (エラー)
+    diag2 = DIAG_OPEN_CIRCUIT;
+  } else {
+    float rawFloat = (temp_ch2 + 250.0) * 5850.0 / 2381.0;
+    raw2 = constrain((uint16_t)rawFloat, 0, 0xFFF);
+  }
+  
+  // CH3, CH4 (未接続 - ダイアグ=オープン、温度=最大値)
+  uint8_t diag3 = DIAG_OPEN_CIRCUIT;
+  uint8_t diag4 = DIAG_OPEN_CIRCUIT;
+  uint16_t raw3 = 0xFFF;
+  uint16_t raw4 = 0xFFF;
+  
+  // Big Endian (MS First) でデータを格納
+  // 各チャンネル: [上位バイト: Diag(4bit)|Temp上位4bit] [下位バイト: Temp下位8bit]
+  
+  // TC1: バイト0-1
+  message.data[0] = ((diag1 & 0x0F) << 4) | ((raw1 >> 8) & 0x0F);
+  message.data[1] = raw1 & 0xFF;
+  
+  // TC2: バイト2-3
+  message.data[2] = ((diag2 & 0x0F) << 4) | ((raw2 >> 8) & 0x0F);
+  message.data[3] = raw2 & 0xFF;
+  
+  // TC3: バイト4-5
+  message.data[4] = ((diag3 & 0x0F) << 4) | ((raw3 >> 8) & 0x0F);
+  message.data[5] = raw3 & 0xFF;
+  
+  // TC4: バイト6-7
+  message.data[6] = ((diag4 & 0x0F) << 4) | ((raw4 >> 8) & 0x0F);
+  message.data[7] = raw4 & 0xFF;
   
   // CAN送信
   mcp2515_bit_modify(CANCTRL, (1 << REQOP2) | (1 << REQOP1) | (1 << REQOP0), 0);
@@ -189,7 +245,7 @@ void loop() {
     if (canInitialized) {
       sendTemperatureCAN(lastTemperature_CH1, lastTemperature_CH2);
       Serial.print(F(" -> CAN 0x"));
-      Serial.print(CAN_ID_TEMPERATURE, HEX);
+      Serial.print(CAN_ID_TCA2, HEX);
       Serial.println(F(" sent"));
     } else {
       Serial.println(F(" (CAN disabled)"));
