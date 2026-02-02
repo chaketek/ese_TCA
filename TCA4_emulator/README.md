@@ -193,6 +193,7 @@ TSMaster、CANalyzer、BUSMASTER 等で使用できます。
 
 - [Haltech TCA4-A 製品ページ](https://www.haltech.com/)
 - [Haltech Wideband Emulator (参考実装)](https://github.com/blacksheepinc/Haltech-wideband-emulator)
+- [IObox Emulator Haltech (参考実装)](https://github.com/ptmotorsport/IObox-emulator-haltech)
 - [SparkFun CAN-Bus Shield](https://www.sparkfun.com/products/13262)
 - [MAX6675 データシート](https://www.maximintegrated.com/en/products/sensors/MAX6675.html)
 
