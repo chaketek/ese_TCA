@@ -31,12 +31,23 @@
 // CAN-Bus Shield標準ピン (参考)
 // #define CAN_CS     10  // MCP2515のCS (ライブラリ内部で使用)
 // #define SD_CS       9  // SDカードのCS
+#define LED_CH1_PIN       8    // CAN-Bus Shield LED2 - CH1状態表示
+#define LED_CH2_PIN       7    // CAN-Bus Shield LED3 - CH2状態表示
+
+// LED点滅設定
+#define LED_SENSOR_ERROR_INTERVAL  200  // センサー異常時の点滅間隔 (ms) - 速い点滅
+#define LED_BUSOFF_INTERVAL        100  // CANバスオフ時の点滅間隔 (ms) - 超高速点滅
+#define LED_ACTIVITY_PULSE          10  // 正常時のアクティビティパルス (ms)
 
 // ============================================
 // CAN設定 (Haltech TCA2 互換)
 // ============================================
-#define CAN_ID_TCA2         0x716  // Haltech TCA2 CAN ID
+#define CAN_ID_TCA2         0x2CC  // Haltech TCA2 CAN ID (716 decimal)
 #define CAN_SEND_INTERVAL   50     // CAN送信間隔 (ms) - 20Hz
+
+// 1Mbps用のCAN速度定義 (16MHz crystal, CNF1=0)
+// SparkFunライブラリはCANSPEED_500(=1)までしか定義していないため追加
+#define CANSPEED_1000       0      // CAN speed at 1000 kbps (1Mbps)
 
 // 診断コード
 #define DIAG_NORMAL           0    // Normal operation
@@ -57,9 +68,16 @@
 // ============================================
 unsigned long lastSendTime = 0;
 unsigned long lastReadTime = 0;
+unsigned long lastSensorErrorBlinkTime = 0;  // センサー異常時LED点滅用タイマー
+unsigned long lastBusOffBlinkTime = 0;       // CANバスオフ時LED点滅用タイマー
+unsigned long lastActivityPulseTime = 0;     // アクティビティパルス用タイマー
 float lastTemperature_CH1 = NAN;   // CH1の温度値をキャッシュ
 float lastTemperature_CH2 = NAN;   // CH2の温度値をキャッシュ
 bool canInitialized = false;
+bool canBusOff = false;            // CANバスオフ状態
+bool sensorErrorBlinkState = false;   // センサー異常時点滅状態
+bool busOffBlinkState = false;        // CANバスオフ時点滅状態
+bool activityPulseActive = false;     // アクティビティパルス中フラグ
 
 // MAX6675の変換時間は最大220ms
 // 余裕を持って250ms以上の間隔で読み取る
@@ -80,6 +98,12 @@ void setup() {
   digitalWrite(MAX6675_CH1_CS, HIGH);  // CH1 CSをHIGHに (非選択状態)
   digitalWrite(MAX6675_CH2_CS, HIGH);  // CH2 CSをHIGHに (非選択状態)
   
+  // CAN-Bus Shield LED 初期化 (状態インジケータ)
+  pinMode(LED_CH1_PIN, OUTPUT);
+  pinMode(LED_CH2_PIN, OUTPUT);
+  digitalWrite(LED_CH1_PIN, LOW);
+  digitalWrite(LED_CH2_PIN, LOW);
+  
   // SPI初期化
   SPI.begin();
   
@@ -88,7 +112,7 @@ void setup() {
   
   // CAN-Bus初期化 (1Mbps - Haltech標準)
   Serial.print(F("Initializing CAN-Bus (1Mbps)... "));
-  if (Canbus.init(CANSPEED_1000)) {  // 1Mbps
+  if (Canbus.init(CANSPEED_1000)) {  // 1Mbps (CNF1=0 for 16MHz crystal)
     Serial.println(F("OK"));
     canInitialized = true;
   } else {
@@ -208,6 +232,89 @@ void sendTemperatureCAN(float temp_ch1, float temp_ch2) {
 }
 
 // ============================================
+// CANバスオフ検出関数
+// ============================================
+// MCP2515のEFLGレジスタを読み取り、バスオフ状態を検出
+bool checkCanBusOff() {
+  if (!canInitialized) {
+    return true;  // CAN未初期化はバスオフ扱い
+  }
+  
+  // EFLGレジスタ (0x2D) を読み取り
+  uint8_t eflg = mcp2515_read_register(EFLG);
+  
+  // TXBO (bit 5): 送信バスオフ状態
+  // TXEP (bit 4): 送信エラーパッシブ
+  // RXEP (bit 3): 受信エラーパッシブ
+  // いずれかがセットされていればエラー状態
+  return (eflg & ((1 << 5) | (1 << 4) | (1 << 3))) != 0;
+}
+
+// ============================================
+// LED状態更新関数
+// ============================================
+// 正常時: 常時点灯 + 送信時に50ms消灯 (アクティビティパルス)
+// センサー異常時: 200ms間隔で速い点滅
+// CANバスオフ時: 両LED同時に100ms間隔で超高速点滅
+void updateLEDs(bool ch1_ok, bool ch2_ok, unsigned long currentTime) {
+  // CANバスオフ状態をチェック
+  canBusOff = checkCanBusOff();
+  
+  // CANバスオフ時の点滅タイミング更新
+  if (currentTime - lastBusOffBlinkTime >= LED_BUSOFF_INTERVAL) {
+    lastBusOffBlinkTime = currentTime;
+    busOffBlinkState = !busOffBlinkState;
+  }
+  
+  // センサー異常時の点滅タイミング更新
+  if (currentTime - lastSensorErrorBlinkTime >= LED_SENSOR_ERROR_INTERVAL) {
+    lastSensorErrorBlinkTime = currentTime;
+    sensorErrorBlinkState = !sensorErrorBlinkState;
+  }
+  
+  // アクティビティパルス終了チェック
+  if (activityPulseActive && (currentTime - lastActivityPulseTime >= LED_ACTIVITY_PULSE)) {
+    activityPulseActive = false;
+  }
+  
+  // ========== 優先度1: CANバスオフ ==========
+  if (canBusOff) {
+    // 両LED同時に超高速点滅 (重大エラー)
+    digitalWrite(LED_CH1_PIN, busOffBlinkState);
+    digitalWrite(LED_CH2_PIN, busOffBlinkState);
+    return;
+  }
+  
+  // ========== 優先度2: センサー状態に応じた表示 ==========
+  
+  // CH1 LED制御
+  if (ch1_ok) {
+    // 正常時: 常時点灯、アクティビティパルス中は消灯
+    digitalWrite(LED_CH1_PIN, activityPulseActive ? LOW : HIGH);
+  } else {
+    // センサー異常時: 200ms間隔で速い点滅
+    digitalWrite(LED_CH1_PIN, sensorErrorBlinkState);
+  }
+  
+  // CH2 LED制御
+  if (ch2_ok) {
+    // 正常時: 常時点灯、アクティビティパルス中は消灯
+    digitalWrite(LED_CH2_PIN, activityPulseActive ? LOW : HIGH);
+  } else {
+    // センサー異常時: 200ms間隔で速い点滅
+    digitalWrite(LED_CH2_PIN, sensorErrorBlinkState);
+  }
+}
+
+// ============================================
+// アクティビティパルス開始関数
+// ============================================
+void startActivityPulse(unsigned long currentTime) {
+  activityPulseActive = true;
+  lastActivityPulseTime = currentTime;
+}
+
+// ============================================
 // メインループ
 // ============================================
 void loop() {
@@ -244,11 +351,26 @@ void loop() {
     // CAN送信
     if (canInitialized) {
       sendTemperatureCAN(lastTemperature_CH1, lastTemperature_CH2);
+      
+      // アクティビティパルス開始 (正常時に一瞬消灯)
+      startActivityPulse(currentTime);
+      
       Serial.print(F(" -> CAN 0x"));
       Serial.print(CAN_ID_TCA2, HEX);
-      Serial.println(F(" sent"));
+      if (canBusOff) {
+        Serial.println(F(" sent (BUS ERROR!)"));
+      } else {
+        Serial.println(F(" sent"));
+      }
     } else {
       Serial.println(F(" (CAN disabled)"));
     }
+  }
+  
+  // LED状態更新 (毎ループ実行 - センサー正常/異常/CANバスオフに応じて制御)
+  if (canInitialized) {
+    bool ch1_ok = !isnan(lastTemperature_CH1);
+    bool ch2_ok = !isnan(lastTemperature_CH2);
+    updateLEDs(ch1_ok, ch2_ok, currentTime);
   }
 }
