@@ -1,8 +1,8 @@
 ﻿[TSMaster]
 LogVerbose=6
 ConfFile=D:\Projects\TOSUN\Projects\TSMaster\bin\Templates\ProjectConfigurations\CAN Bus Measurement.T7z
-Bounds=0,0,2902,1750
-Maximized=1
+Bounds=177,21,1990,1728
+Maximized=0
 DisplayHex=1
 DisplaySym=1
 Skin=
@@ -36,11 +36,11 @@ CANCount=0
 [Pg0]
 Count=4
 f0=TfrmCANFDTransmit,0,0,0,776,311,375,63,1108,608,1
-f1=TfrmGraphics,0,89,463,2362,979,157,198,936,462,1
-f2=TfrmCANFDTrace,0,776,0,1869,604,152,82,1358,523,1
+f1=TfrmGraphics,0,-163,951,2362,979,157,198,936,462,1
+f2=TfrmCANFDTransmit,1,-6,533,1928,844,0,0,1590,844,1
 HiddenCount=1
-h0=TfrmCANDatabase,0,307,108,1522,944,160,133,951,594,1
-f3=TfrmCANFDTransmit,1,805,572,1928,844,0,0,1590,844,1
+h0=TfrmCANDatabase,0,0,257,1522,944,160,133,951,594,1
+f3=TfrmCANFDTrace,0,53,0,1869,604,152,82,1358,523,1
 
 [Pg1]
 Count=3
@@ -66,7 +66,7 @@ MDI=1
 CaptionRenamed=0
 IsExternal=0
 Caption=系统消息
-UICommon=0,-1,0,0,U3lzdGVtIE1lc3NhZ2Vz,100,221,2763522194622534978,0
+UICommon=0,-1,0,0,U3lzdGVtIE1lc3NhZ2Vz,100,237,2763522194622534978,0
 UIFilter=
 
 [CANFDTraceOptions]
@@ -150,13 +150,16 @@ CaptionRenamed=0
 IsExternal=0
 Caption=CAN 数据库
 HWChnCount=2
-UICommon=0,-1,0,0,Q0FOIERhdGFiYXNl,100,428,4850096196990154383,0
+UICommon=0,-1,0,0,Q0FOIERhdGFiYXNl,100,427,4850096196990154383,0
 UIFilter=
 PropertyHeight=447
 PropertyVisible=1
-DBFilesCount=0
-DBOriCount=0
-ChnCANCount=0
+DBFilesCount=1
+DBOriCount=1
+ChnCANCount=1
+DBFiles0=.\DB\CAN\MAX6675_CAN.pdbc
+DBOri0=C:\Users\chake\OneDrive\Desktop\ese_TCA\MAX6675_TEST\MAX6675_CAN.dbc
+ChnCAN0=0
 
 [CANStat]
 AutoStart=0
@@ -164,7 +167,7 @@ MDI=1
 CaptionRenamed=0
 IsExternal=0
 Caption=CAN统计数据
-UICommon=0,-1,0,0,Q0FOIFN0YXRpc3RpY3M_,100,124,7085007512070152287,0
+UICommon=0,-1,0,0,Q0FOIFN0YXRpc3RpY3M_,100,118,7085007512070152287,0
 UIFilter=
 
 [ChannelMappings]
@@ -195,7 +198,7 @@ TfrmCANTrace_2=1597,114,2546,512
 TfrmMeter_1=1738,105,2472,673
 TfrmTSCANmini_0=336,142,1939,994
 TfrmCANTransmit_1=80,38,1104,806
-TfrmTSMaster_0=-11,-11,2891,1739
+TfrmTSMaster_0=177,21,1990,1728
 TfrmSTDForms_0=165,260,1735,1041
 TfrmCANFDTransmit_0=375,63,1483,671
 TfrmLINTrace_0=68,53,1092,821
@@ -213,7 +216,7 @@ TfrmCANRBS_0=80,44,1104,812
 TfrmMPLibrary_0=324,98,1348,866
 TfrmSignalMapping_0=324,98,1348,866
 TfrmNumeric_0=170,78,927,345
-TfrmCANDatabase1=679,483,2201,1427
+TfrmCANDatabase1=141,217,1663,1161
 TfrmHardware=838,414,2042,1314
 
 [RTL_Form_Position_MDI]
@@ -259,12 +262,12 @@ TfrmSTIM_0=289,59,1297,636
 TfrmAutomotiveFileConverter_0=334,42,1309,641
 TfrmNumeric_0=170,78,927,345
 TfrmSystemMsgs=0,0,1939,490
-Graphics=89,463,2451,1442
+Graphics=-163,951,2199,1930
 TfrmCANStatistics=0,0,424,599
-TfrmCANDatabase=307,108,1829,1052
+TfrmCANDatabase=0,257,1522,1201
 CANFDTransmit=0,0,776,311
-CANFDTraceOptions=776,0,2645,604
-CANFDTransmit1=805,572,2733,1416
+CANFDTraceOptions=53,0,1922,604
+CANFDTransmit1=-6,533,1922,1377
 
 [MDIInstances]
 TfrmSystemMsgs=1
@@ -345,10 +348,10 @@ Pg1=CAN Analysis
 DisableResize=0
 ScreenWidth=2880
 ScreenHeight=1800
-MainBounds=-11,-11,2891,1739
+MainBounds=177,21,1990,1728
 PixelsPerInch=144
-AppLeftP=-11
-AppTopP=-11
+AppLeftP=177
+AppTopP=21
 
 [Graphics]
 ColorBkgd=4294967295

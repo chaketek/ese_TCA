@@ -1,6 +1,15 @@
 # Haltech TCA4-A エミュレータ
 
-Arduino + SparkFun CAN-Bus Shield を使用した Haltech TCA4-A 熱電対アンプのエミュレータです。
+MAX6675 熱電対センサーを使用した Haltech TCA4-A 熱電対アンプのエミュレータです。
+
+## 対応プラットフォーム
+
+| プラットフォーム | フォルダ | CANコントローラ |
+|-----------------|---------|----------------|
+| **Arduino UNO** | [for_ArduinoUno/](for_ArduinoUno/) | MCP2515 (SparkFun CAN-Bus Shield) |
+| **ESP32 DevKitC** | [for_ESP32/](for_ESP32/) | 内蔵TWAI + 外付けトランシーバ |
+
+詳細なハードウェア構成・配線については各フォルダのREADMEを参照してください。
 
 ## 概要
 
@@ -16,44 +25,27 @@ Arduino + SparkFun CAN-Bus Shield を使用した Haltech TCA4-A 熱電対アン
 
 ## ハードウェア構成
 
-### 必要な部品
+プラットフォーム別のハードウェア構成は各フォルダのREADMEを参照してください：
+
+- **Arduino UNO版**: [for_ArduinoUno/README.md](for_ArduinoUno/README.md)
+- **ESP32版**: [for_ESP32/README.md](for_ESP32/README.md)
+
+### 共通部品
 
 | 部品 | 数量 | 備考 |
 |------|------|------|
-| Arduino UNO (または互換機) | 1 | |
-| SparkFun CAN-Bus Shield | 1 | DEV-13262 |
 | MAX6675 熱電対モジュール | 2 | K型熱電対付き |
-
-### ピン割り当て
-
-| 機能 | Arduinoピン | 備考 |
-|------|-------------|------|
-| MAX6675 CH1 CS | D3 | チップセレクト |
-| MAX6675 CH2 CS | D4 | チップセレクト |
-| MAX6675 SCK | D13 | SPI共有 |
-| MAX6675 SO (MISO) | D12 | SPI共有 |
-| MAX6675 VCC | 外部5V | Arduino 5Vピンまたは外部電源 |
-| MAX6675 GND | GND | 共通GND |
-| LED CH1 (状態表示) | D8 | CAN-Bus Shield LED2 |
-| LED CH2 (状態表示) | D7 | CAN-Bus Shield LED3 |
-| CAN CS | D10 | CAN-Bus Shield標準 |
-
-### 配線図
-
-```
-Arduino/CAN-Bus Shield          MAX6675 CH1       MAX6675 CH2
-========================        ===========       ===========
-     D3  ─────────────────────── CS
-     D4  ──────────────────────────────────────── CS
-     5V  ─────────────────────── VCC ──────────── VCC
-    GND  ─────────────────────── GND ──────────── GND
-    D13 (SCK)  ───────────────── SCK ──────────── SCK
-    D12 (MISO) ───────────────── SO  ──────────── SO
-```
 
 ---
 
-## CAN通信仕様
+## プラットフォーム別ドキュメント
+
+- **Arduino UNO版**: [for_ArduinoUno/README.md](for_ArduinoUno/README.md) - ピン配置、配線図
+- **ESP32版**: [for_ESP32/README.md](for_ESP32/README.md) - ピン配置、配線図、Arduino IDE設定
+
+---
+
+## CAN通信仕様 (共通)
 
 ### 基本仕様
 
@@ -107,9 +99,9 @@ Arduino/CAN-Bus Shield          MAX6675 CH1       MAX6675 CH2
 
 ---
 
-## LED状態表示
+## LED状態表示 (共通)
 
-CAN-Bus Shield の LED2 (D8) と LED3 (D7) を使用して、各チャンネルの状態を表示します。
+LED2 と LED3 (またはESP32版ではGPIO 2/4) を使用して、各チャンネルの状態を表示します。
 
 ### LED表示パターン
 
@@ -163,12 +155,16 @@ CH1: Error | CH2: 26.25C -> CAN 0x2CC sent
 
 ## 必要なライブラリ
 
-### SparkFun CAN-Bus Arduino Library
+### Arduino UNO版
+- **SparkFun CAN-Bus Arduino Library**
+  - GitHub: https://github.com/sparkfun/SparkFun_CAN-Bus_Arduino_Library
+  - Arduino Library Manager からインストール可能
 
-- GitHub: https://github.com/sparkfun/SparkFun_CAN-Bus_Arduino_Library
-- Arduino Library Manager からインストール可能
+### ESP32版
+- **ESP32 Arduino Core** (追加ライブラリ不要)
+  - TWAI ドライバは Core に含まれています
 
-### 1Mbps対応について
+### Arduino UNO版 1Mbps対応について
 
 SparkFun ライブラリは標準で 500kbps までしかサポートしていません。
 本プロジェクトでは以下の定義を追加して 1Mbps に対応しています：
@@ -181,9 +177,10 @@ SparkFun ライブラリは標準で 500kbps までしかサポートしてい�
 
 ## DBCファイル
 
-CAN解析ツール用の DBC ファイルが同梱されています：
+CAN解析ツール用の DBC ファイルが各フォルダに同梱されています：
 
-- `Haltech_TCA4_emulator.dbc`
+- `for_ArduinoUno/Haltech_TCA4_emulator.dbc`
+- `for_ESP32/Haltech_TCA4_emulator.dbc`
 
 TSMaster、CANalyzer、BUSMASTER 等で使用できます。
 
@@ -212,3 +209,5 @@ MIT License
 | 2026/02/02 | 初版リリース - Haltech TCA4-A エミュレータ完成 |
 | 2026/02/02 | LED状態表示機能追加 (正常/センサー異常/CANバスオフ) |
 | 2026/02/02 | CANバスオフ検出機能追加 |
+| 2026/02/03 | **ESP32版追加** - TWAI内蔵コントローラ対応 |
+| 2026/02/03 | フォルダ構成変更 (for_ArduinoUno, for_ESP32) |
