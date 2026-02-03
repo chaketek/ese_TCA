@@ -1,0 +1,72 @@
+VERSION ""
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: Haltech_TCA2_Emulator
+
+
+BO_ 716 TCA2_Temperature_Data: 8 Haltech_TCA2_Emulator
+ SG_ CAN_TC1_Diag : 7|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC1 : 3|12@0+ (0.4071,-250) [-250|1417] "degC" Vector__XXX
+ SG_ CAN_TC2_Diag : 23|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC2 : 19|12@0+ (0.4071,-250) [-250|1417] "degC" Vector__XXX
+ SG_ CAN_TC3_Diag : 39|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC3 : 35|12@0+ (0.4071,-250) [-250|1417] "degC" Vector__XXX
+ SG_ CAN_TC4_Diag : 55|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ CAN_TC4 : 51|12@0+ (0.4071,-250) [-250|1417] "degC" Vector__XXX
+
+
+
+CM_ BU_ Haltech_TCA2_Emulator "Haltech TCA2 Thermocouple Amplifier Emulator using MAX6675 sensors. Ref: https://github.com/blacksheepinc/Haltech-wideband-emulator";
+CM_ BO_ 716 "Haltech TCA2 compatible thermocouple temperature data (CAN ID 0x716). 4 channels, each 16-bit: [Diag(4bit)|Temp(12bit)]";
+CM_ SG_ 716 CAN_TC1_Diag "TC1 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 716 CAN_TC1 "TC1 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
+CM_ SG_ 716 CAN_TC2_Diag "TC2 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 716 CAN_TC2 "TC2 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
+CM_ SG_ 716 CAN_TC3_Diag "TC3 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 716 CAN_TC3 "TC3 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
+CM_ SG_ 716 CAN_TC4_Diag "TC4 Diagnostic Code: 0=Normal, 1=Short, 2=Open, 3=Under Range, 4=Over Range";
+CM_ SG_ 716 CAN_TC4 "TC4 Temperature. Conversion: temp = raw * 2381 / 5850 - 250";
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 10000;
+BA_DEF_ SG_  "GenSigStartValue" FLOAT 0 0;
+BA_DEF_ BU_  "NodeComment" STRING ;
+BA_DEF_DEF_  "GenMsgCycleTime" 0;
+BA_DEF_DEF_  "GenSigStartValue" 0;
+BA_DEF_DEF_  "NodeComment" "";
+BA_ "GenMsgCycleTime" BO_ 716 50;
+VAL_ 716 CAN_TC1_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range" ;
+VAL_ 716 CAN_TC2_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range" ;
+VAL_ 716 CAN_TC3_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range" ;
+VAL_ 716 CAN_TC4_Diag 0 "Normal" 1 "Short_Circuit" 2 "Open_Circuit" 3 "Under_Range" 4 "Over_Range" ;
+
