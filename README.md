@@ -17,6 +17,7 @@ ese_TCA/
 
 本プロジェクトは、MAX6675 K型熱電対モジュールで計測した温度データを、Haltech TCA4-A 互換の CAN フォーマットで送信するエミュレータです。
 
+
 ### 主な特徴
 
 - **2プラットフォーム対応**: Arduino UNO / ESP32 DevKitC
@@ -26,22 +27,31 @@ ese_TCA/
 
 ## CAN通信仕様
 
-| 項目 | 値 |
-|------|-----|
-| CAN速度 | 1 Mbps |
-| CAN ID | 0x2CC (716 decimal) |
-| データ長 | 8 バイト |
-| 送信周期 | 50 ms (20 Hz) |
+| 項目     | 値                  |
+| -------- | ------------------- |
+| CAN速度  | 1 Mbps              |
+| CAN ID   | 0x2CC (716 decimal) |
+| データ長 | 8 バイト            |
+| 送信周期 | 50 ms (20 Hz)       |
 
 ## クイックスタート
 
 1. 使用するプラットフォームのフォルダを選択
+
    - Arduino UNO → `TCA4_emulator/for_ArduinoUno/`
    - ESP32 → `TCA4_emulator/for_ESP32/`
-
 2. 各フォルダの README.md を参照してハードウェアを準備
-
 3. `.ino` ファイルを Arduino IDE で開いてアップロード
+
+## 完成参考図
+
+### ESP32版 完成形
+
+![ESP32デバイス](TCA4_emulator/image/214158.jpg)
+
+### ハードウェア配線例
+
+![ハードウェア構成](TCA4_emulator/image/213708.jpg)
 
 ## 参考リンク
 
